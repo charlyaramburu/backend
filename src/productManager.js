@@ -67,14 +67,14 @@ const ProductManager = class {
         this.products.delete(product.code);
     }
 
-    saveToFile() {
+    async saveToFile() {
         const productsArray = Array.from(this.products.values());
-        fs.writeFileSync(this.path, JSON.stringify(productsArray));
+        await fs.promises.writeFile(this.path, JSON.stringify(productsArray));
     }
 
-    loadFromFile() {
+    async loadFromFile() {
         if (fs.existsSync(this.path)) {
-            const productsArray = JSON.parse(fs.readFileSync(this.path));
+            const productsArray = JSON.parse(await fs.promises.readFile(this.path));
             this.counter = 0;
             this.products.clear();
 
@@ -86,19 +86,4 @@ const ProductManager = class {
     }
 };
 
-const productManager = new ProductManager('./products.json');
-productManager.loadFromFile();
-
-productManager.addProduct('Product1', 'Description1', 10.99, 'product1.jpeg', 'P001', 50);
-
-const productId = 0;
-const productById = productManager.getProductById(productId);
-console.log(productById);
-
-productManager.updateProduct(productId, { title: 'Updated Product1', description: 'Updated Description1', price: 12.99 });
-console.log(productManager.getProductById(productId));
-
-productManager.deleteProduct(productId);
-console.log(productManager.getProducts());
-
-productManager.saveToFile();
+module.exports = ProductManager;

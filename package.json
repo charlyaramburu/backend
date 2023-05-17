@@ -1,0 +1,23 @@
+{
+  "name": "productmanager",
+  "version": "1.0.0",
+  "description": "Administrador de productos para ecommerce.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charlyaramburu/backend.git"
+  },
+  "keywords": [
+    "Ecommerce",
+    "ProductManager"
+  ],
+  "author": "Charly Arámburu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/charlyaramburu/backend/issues"
+  },
+  "homepage": "https://github.com/charlyaramburu/backend#readme"
+}
