@@ -1,31 +1,10 @@
 const fs = require('fs');
-const Product = class {
-    constructor(id, title, description, price, thumbnail, code, stock) {
-        Object.assign(this, { id, title, description, price, thumbnail, code, stock });
-    }
-};
 
-const ProductManager = class {
+class ProductManager {
     constructor(path) {
         this.products = new Map();
         this.counter = 0;
         this.path = path;
-    }
-
-    addProduct(title, description, price, thumbnail, code, stock) {
-        const requiredFields = [title, description, price, thumbnail, code, stock];
-        if (requiredFields.includes(undefined)) {
-            console.error("Todos los campos son obligatorios.");
-            return;
-        }
-
-        if (this.products.has(code)) {
-            console.error("El código ya está en uso.");
-            return;
-        }
-
-        const newProduct = new Product(this.counter++, title, description, price, thumbnail, code, stock);
-        this.products.set(code, newProduct);
     }
 
     getProducts() {
@@ -33,38 +12,36 @@ const ProductManager = class {
     }
 
     getProductById(id) {
-        const foundProduct = Array.from(this.products.values()).find(product => product.id === id);
-        if (!foundProduct) {
-            console.error("El id no existe.");
-            return;
-        }
-        return { ...foundProduct };
+        return this.products.get(id);
     }
 
-    updateProduct(id, updatedFields) {
-        const product = Array.from(this.products.values()).find(product => product.id === id);
+    addProduct(title, description, code, price, status, stock, category, thumbnails) {
+        const newProduct = {
+            id: this.counter++,
+            title,
+            description,
+            code,
+            price,
+            status,
+            stock,
+            category,
+            thumbnails
+        };
+        this.products.set(newProduct.id, newProduct);
+        return newProduct;
+    }
 
-        if (!product) {
-            console.error("El id no existe.");
-            return;
-        }
-
-        for (const [key, value] of Object.entries(updatedFields)) {
-            if (key !== 'id' && product.hasOwnProperty(key)) {
-                product[key] = value;
-            }
-        }
+    updateProduct(id, productData) {
+        const product = this.products.get(id);
+        if (!product) return null;
+        const updatedProduct = { ...product, ...productData };
+        updatedProduct.id = product.id;
+        this.products.set(updatedProduct.id, updatedProduct);
+        return updatedProduct;
     }
 
     deleteProduct(id) {
-        const product = Array.from(this.products.values()).find(product => product.id === id);
-
-        if (!product) {
-            console.error("El id no existe.");
-            return;
-        }
-
-        this.products.delete(product.code);
+        return this.products.delete(id);
     }
 
     async saveToFile() {
@@ -77,10 +54,9 @@ const ProductManager = class {
             const productsArray = JSON.parse(await fs.promises.readFile(this.path));
             this.counter = 0;
             this.products.clear();
-
             for (const productData of productsArray) {
-                const product = new Product(this.counter++, productData.title, productData.description, productData.price, productData.thumbnail, productData.code, productData.stock);
-                this.products.set(product.code, product);
+                const product = this.addProduct(productData.title, productData.description, productData.code, productData.price, productData.status, productData.stock, productData.category, productData.thumbnails);
+                this.counter = Math.max(this.counter, product.id + 1);
             }
         }
     }

@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/charlyaramburu/backend/issues"
   },
-  "homepage": "https://github.com/charlyaramburu/backend#readme"
+  "homepage": "https://github.com/charlyaramburu/backend#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
 }

@@ -1,29 +1,27 @@
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = 8080;
 
 const ProductManager = require('./productManager'); 
+const CartManager = require('./CartManager');
 
 const productManager = new ProductManager('./products.json');
+const cartManager = new CartManager('./carts.json');
 
 app.use(express.json());
 
-app.get('/products', (req, res) => {
-    let products = productManager.getProducts();
+const productRouter = express.Router();
+const cartRouter = express.Router();
 
-    if (req.query.limit) {
-        const limit = parseInt(req.query.limit);
-        if (!isNaN(limit)) {
-            products = products.slice(0, limit);
-        }
-    }
+app.use('/api/products', productRouter);
+app.use('/api/carts', cartRouter);
 
-    res.send(products);
+productRouter.get('/', (req, res) => {
+    res.send(productManager.getProducts());
 });
 
-app.get('/products/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const product = productManager.getProductById(id);
+productRouter.get('/:pid', (req, res) => {
+    const product = productManager.getProductById(Number(req.params.pid));
     if (!product) {
         res.status(404).send({ error: 'Producto no encontrado' });
     } else {
@@ -31,19 +29,30 @@ app.get('/products/:id', (req, res) => {
     }
 });
 
-app.post('/products', async (req, res) => {
+productRouter.post('/', async (req, res) => {
+    const { title, description, code, price, status, stock, category, thumbnails } = req.body;
+
+    // Validación
+    if (!title || !description || !code || price === undefined || status === undefined || stock === undefined || !category || !thumbnails) {
+        return res.status(400).send({ error: 'Faltan campos requeridos' });
+    }
+
     try {
-        productManager.addProduct(req.body.title, req.body.description, req.body.price, req.body.thumbnail, req.body.code, req.body.stock);
+        const newProduct = productManager.addProduct(title, description, code, price, status, stock, category, thumbnails);
         await productManager.saveToFile();
-        res.send({ message: 'Producto agregado con éxito.' });
+        res.status(201).send(newProduct);
     } catch (error) {
         res.status(500).send({ error: 'Hubo un error al agregar el producto.' });
     }
 });
 
-app.put('/products/:id', async (req, res) => {
+productRouter.put('/:pid', async (req, res) => {
+    const product = productManager.getProductById(Number(req.params.pid));
+    if (!product) {
+        return res.status(404).send({ error: 'Producto no encontrado' });
+    }
     try {
-        productManager.updateProduct(Number(req.params.id), req.body);
+        productManager.updateProduct(Number(req.params.pid), req.body);
         await productManager.saveToFile();
         res.send({ message: 'Producto actualizado con éxito.' });
     } catch (error) {
@@ -51,9 +60,13 @@ app.put('/products/:id', async (req, res) => {
     }
 });
 
-app.delete('/products/:id', async (req, res) => {
+productRouter.delete('/:pid', async (req, res) => {
+    const product = productManager.getProductById(Number(req.params.pid));
+    if (!product) {
+        return res.status(404).send({ error: 'Producto no encontrado' });
+    }
     try {
-        productManager.deleteProduct(Number(req.params.id));
+        productManager.deleteProduct(Number(req.params.pid));
         await productManager.saveToFile();
         res.send({ message: 'Producto eliminado con éxito.' });
     } catch (error) {
@@ -61,10 +74,48 @@ app.delete('/products/:id', async (req, res) => {
     }
 });
 
+cartRouter.post('/', async (req, res) => {
+    try {
+        const newCart = cartManager.createCart();
+        await cartManager.saveToFile();
+        res.send(newCart);
+    } catch (error) {
+        res.status(500).send({ error: 'Hubo un error al crear el carrito.' });
+    }
+});
+
+cartRouter.get('/:cid', (req, res) => {
+    const cart = cartManager.getCart(Number(req.params.cid));
+    if (!cart) {
+        res.status(404).send({ error: 'Carrito no encontrado' });
+    } else {
+        res.send(cart);
+    }
+});
+
+cartRouter.post('/:cid/product/:pid', async (req, res) => {
+    const cart = cartManager.getCart(Number(req.params.cid));
+    if (!cart) {
+        return res.status(404).send({ error: 'Carrito no encontrado' });
+    }
+    const product = productManager.getProductById(Number(req.params.pid));
+    if (!product) {
+        return res.status(404).send({ error: 'Producto no encontrado' });
+    }
+    try {
+        cartManager.addProductToCart(Number(req.params.cid), Number(req.params.pid));
+        await cartManager.saveToFile();
+        res.send(cart);
+    } catch (error) {
+        res.status(500).send({ error: 'Hubo un error al agregar el producto al carrito.' });
+    }
+});
+
 app.listen(port, async () => {
     try {
         await productManager.loadFromFile();
-        console.log(`ProductManager app listening at http://localhost:${port}`);
+        await cartManager.loadFromFile();
+        console.log(`App listening at http://localhost:${port}`);
     } catch (error) {
         console.error('Error al iniciar el servidor: ', error);
     }
