@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real Time Products</title>
+</head>
+<body>
+    <h1>Real Time Products</h1>
+
+    <ul id="productList">
+        {{#each products}}
+        <li id="product-{{id}}">
+            {{title}} - {{description}} - {{code}} - {{price}} - {{status}} - {{stock}} - {{category}} - {{thumbnails}}
+        </li>
+        {{/each}}
+    </ul>
+
+    <form id="productForm">
+        <input id="title" type="text" placeholder="Title" />
+        <input id="description" type="text" placeholder="Description" />
+        <input id="code" type="text" placeholder="Code" />
+        <input id="price" type="number" placeholder="Price" />
+        <input id="status" type="text" placeholder="Status" />
+        <input id="stock" type="number" placeholder="Stock" />
+        <input id="category" type="text" placeholder="Category" />
+        <input id="thumbnails" type="text" placeholder="Thumbnails" />
+        <button type="submit">Add Product</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        document.getElementById('productForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var newProduct = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                code: document.getElementById('code').value,
+                price: document.getElementById('price').value,
+                status: document.getElementById('status').value,
+                stock: document.getElementById('stock').value,
+                category: document.getElementById('category').value,
+                thumbnails: document.getElementById('thumbnails').value
+            };
+
+            socket.emit('newProduct', newProduct);
+        });
+
+        socket.on('productAdded', function (product) {
+            var li = document.createElement('li');
+            li.textContent = product.title + ' - ' + product.description + ' - ' + product.code + ' - ' + product.price + ' - ' + product.status + ' - ' + product.stock + ' - ' + product.category + ' - ' + product.thumbnails;
+            li.id = 'product-' + product.id;
+            document.getElementById('productList').appendChild(li);
+        });
+
+        socket.on('productDeleted', function (productId) {
+            var li = document.getElementById('product-' + productId);
+            if (li) {
+                document.getElementById('productList').removeChild(li);
+            }
+        });
+    </script>
+</body>
+</html>

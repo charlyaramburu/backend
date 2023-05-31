@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Products</title>
+</head>
+<body>
+    <h1>Products</h1>
+    <ul>
+        {{#each products}}
+            <li>{{this.id}} - {{this.title}} - {{this.description}} - {{this.code}} - {{this.price}} - {{this.status}} - {{this.stock}} - {{this.category}} - {{this.thumbnails}}</li>
+        {{/each}}
+    </ul>
+</body>
+</html>

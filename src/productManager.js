@@ -52,10 +52,20 @@ class ProductManager {
     async loadFromFile() {
         if (fs.existsSync(this.path)) {
             const productsArray = JSON.parse(await fs.promises.readFile(this.path));
-            this.counter = 0;
             this.products.clear();
             for (const productData of productsArray) {
-                const product = this.addProduct(productData.title, productData.description, productData.code, productData.price, productData.status, productData.stock, productData.category, productData.thumbnails);
+                const product = {
+                    id: productData.id,
+                    title: productData.title,
+                    description: productData.description,
+                    code: productData.code,
+                    price: productData.price,
+                    status: productData.status,
+                    stock: productData.stock,
+                    category: productData.category,
+                    thumbnails: productData.thumbnails
+                };
+                this.products.set(product.id, product);
                 this.counter = Math.max(this.counter, product.id + 1);
             }
         }

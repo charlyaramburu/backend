@@ -1,128 +1,38 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require("socket.io");
+const exphbs  = require('express-handlebars');
+const fs = require('fs');
+
 const app = express();
-const port = 8080;
+const server = http.createServer(app);
+const io = new Server(server);
 
-const ProductManager = require('./productManager'); 
-const CartManager = require('./CartManager');
+app.engine('handlebars', exphbs());
+app.set('view engine', 'handlebars');
 
-const productManager = new ProductManager('./products.json');
-const cartManager = new CartManager('./carts.json');
-
-app.use(express.json());
-
-const productRouter = express.Router();
-const cartRouter = express.Router();
-
-app.use('/api/products', productRouter);
-app.use('/api/carts', cartRouter);
-
-productRouter.get('/', (req, res) => {
-    res.send(productManager.getProducts());
+app.get('/', (req, res) => {
+    res.render('index', { products: Array.from(productManager.getProducts()) });
 });
 
-productRouter.get('/:pid', (req, res) => {
-    const product = productManager.getProductById(Number(req.params.pid));
-    if (!product) {
-        res.status(404).send({ error: 'Producto no encontrado' });
-    } else {
-        res.send(product);
-    }
+app.get('/realtimeproducts', (req, res) => {
+    res.render('realTimeProducts', { products: Array.from(productManager.getProducts()) });
 });
 
-productRouter.post('/', async (req, res) => {
-    const { title, description, code, price, status, stock, category, thumbnails } = req.body;
-
-    // Validación
-    if (!title || !description || !code || price === undefined || status === undefined || stock === undefined || !category || !thumbnails) {
-        return res.status(400).send({ error: 'Faltan campos requeridos' });
-    }
-
-    try {
-        const newProduct = productManager.addProduct(title, description, code, price, status, stock, category, thumbnails);
+io.on('connection', (socket) => {
+    socket.on('newProduct', async (productData) => {
+        const newProduct = productManager.addProduct(productData.title, productData.description, productData.code, productData.price, productData.status, productData.stock, productData.category, productData.thumbnails);
         await productManager.saveToFile();
-        res.status(201).send(newProduct);
-    } catch (error) {
-        res.status(500).send({ error: 'Hubo un error al agregar el producto.' });
-    }
-});
+        io.emit('productAdded', newProduct);
+    });
 
-productRouter.put('/:pid', async (req, res) => {
-    const product = productManager.getProductById(Number(req.params.pid));
-    if (!product) {
-        return res.status(404).send({ error: 'Producto no encontrado' });
-    }
-    try {
-        productManager.updateProduct(Number(req.params.pid), req.body);
+    socket.on('deleteProduct', async (productId) => {
+        productManager.deleteProduct(productId);
         await productManager.saveToFile();
-        res.send({ message: 'Producto actualizado con éxito.' });
-    } catch (error) {
-        res.status(500).send({ error: 'Hubo un error al actualizar el producto.' });
-    }
+        io.emit('productDeleted', productId);
+    });
 });
 
-productRouter.delete('/:pid', async (req, res) => {
-    const product = productManager.getProductById(Number(req.params.pid));
-    if (!product) {
-        return res.status(404).send({ error: 'Producto no encontrado' });
-    }
-    try {
-        productManager.deleteProduct(Number(req.params.pid));
-        await productManager.saveToFile();
-        res.send({ message: 'Producto eliminado con éxito.' });
-    } catch (error) {
-        res.status(500).send({ error: 'Hubo un error al eliminar el producto.' });
-    }
-});
-
-cartRouter.post('/', async (req, res) => {
-    try {
-        const newCart = cartManager.createCart();
-        await cartManager.saveToFile();
-        res.send(newCart);
-    } catch (error) {
-        res.status(500).send({ error: 'Hubo un error al crear el carrito.' });
-    }
-});
-
-cartRouter.get('/:cid', (req, res) => {
-    const cart = cartManager.getCart(Number(req.params.cid));
-    if (!cart) {
-        res.status(404).send({ error: 'Carrito no encontrado' });
-    } else {
-        res.send(cart);
-    }
-});
-
-cartRouter.post('/:cid/product/:pid', async (req, res) => {
-    const cart = cartManager.getCart(Number(req.params.cid));
-    if (!cart) {
-        return res.status(404).send({ error: 'Carrito no encontrado' });
-    }
-    const product = productManager.getProductById(Number(req.params.pid));
-    if (!product) {
-        return res.status(404).send({ error: 'Producto no encontrado' });
-    }
-    try {
-        cartManager.addProductToCart(Number(req.params.cid), Number(req.params.pid));
-        await cartManager.saveToFile();
-        res.send(cart);
-    } catch (error) {
-        res.status(500).send({ error: 'Hubo un error al agregar el producto al carrito.' });
-    }
-});
-
-app.listen(port, async () => {
-    try {
-        await productManager.loadFromFile();
-        await cartManager.loadFromFile();
-        console.log(`App listening at http://localhost:${port}`);
-    } catch (error) {
-        console.error('Error al iniciar el servidor: ', error);
-    }
-});
-
-// Middleware para manejo de errores
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send({ error: 'Algo salió mal.' });
+server.listen(3000, () => {
+    console.log('Listening on *:3000');
 });
