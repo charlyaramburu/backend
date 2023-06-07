@@ -3,6 +3,8 @@ const http = require('http');
 const { Server } = require("socket.io");
 const exphbs  = require('express-handlebars');
 const fs = require('fs');
+const ProductManager = require('./productManager');
+const CartManager = require('./CartManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,12 +13,19 @@ const io = new Server(server);
 app.engine('handlebars', exphbs());
 app.set('view engine', 'handlebars');
 
+const productManager = new ProductManager('./products.json');
+const cartManager = new CartManager('./carts.json');
+
+// Load data from file
+productManager.loadFromFile().catch(console.error);
+cartManager.loadFromFile().catch(console.error);
+
 app.get('/', (req, res) => {
-    res.render('index', { products: Array.from(productManager.getProducts()) });
+    res.render('index', { products: productManager.getProducts() });
 });
 
 app.get('/realtimeproducts', (req, res) => {
-    res.render('realTimeProducts', { products: Array.from(productManager.getProducts()) });
+    res.render('realTimeProducts', { products: productManager.getProducts() });
 });
 
 io.on('connection', (socket) => {
